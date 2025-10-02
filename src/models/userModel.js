@@ -1,14 +1,18 @@
-const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
-const userSchema = new mongoose.Schema({
-  fullName: { type: String, required: true },
-  dateOfBirth: { type: Date, required: true },
-  email: { type: String, unique: true, required: true },
-  password: { type: String, required: true },
-  role: { type: String, enum: ['admin', 'user'], default: 'user' },
-  isActive: { type: Boolean, default: true },
-});
-
-const User = mongoose.model('User', userSchema);
+class User {
+  constructor(data) {
+    this.fullName = data.fullName;
+    this.dateOfBirth = data.dateOfBirth;
+    this.email = data.email;
+    this.password = data.password;
+    this.role = data.role || 'user';
+    this.status = data.status || true;
+  }
+  // функция хэширует пароль
+  async hashPassword() {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+}
 
 module.exports = User;

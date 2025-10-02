@@ -1,22 +1,32 @@
-const User = require('../models/userModel');
-const bcrypt = require('bcryptjs');
+const createUser = require('../models/userModel');
 const jwt = require('jsonwebtoken');
+const User = require('../models/userModel');
+const { userDB } = require('../config/db');
 
 // Регистрация пользователя
 exports.registerUser = async (req, res) => {
-  const { fullName, dateOfBirth, email, password } = req.body;
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({
-      fullName,
-      dateOfBirth,
-      email,
-      password: hashedPassword,
+    const newUser = new User(req.body);
+    await newUser.hashPassword(); // функция хэширует пароль
+
+    const responseByEmeil = await userDB.find({
+      selector: { email: newUser.email },
+      fields: ['email'], // указываем поле, которые хотим получить
     });
-    await newUser.save();
-    res.status(201).json({ message: 'User registered successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Registration failed' });
+    //проверяем по email имеется newUser в userDB
+    if (responseByEmeil.docs.length === 0) {
+      const responseInsert = await userDB.insert(newUser);
+      res
+        .status(201)
+        .json({ message: 'User registered successfully:', responseInsert });
+    } else {
+      res.status(405).json({
+        message:
+          'User with such data is already registered, please change the email',
+      });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Registration failed:', err });
   }
 };
 
