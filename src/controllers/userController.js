@@ -1,7 +1,8 @@
-const createUser = require('../models/userModel');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
 const { userDB } = require('../config/db');
+const { JWT_SECRET } = require('../../config');
 
 // Регистрация пользователя
 exports.registerUser = async (req, res) => {
@@ -9,18 +10,18 @@ exports.registerUser = async (req, res) => {
     const newUser = new User(req.body);
     await newUser.hashPassword(); // функция хэширует пароль
 
-    const responseByEmeil = await userDB.find({
+    const emailByResponse = await userDB.find({
       selector: { email: newUser.email },
       fields: ['email'], // указываем поле, которые хотим получить
     });
     //проверяем по email имеется newUser в userDB
-    if (responseByEmeil.docs.length === 0) {
-      const responseInsert = await userDB.insert(newUser);
+    if (emailByResponse.docs.length === 0) {
+      const insertResponse = await userDB.insert(newUser);
       res
         .status(201)
-        .json({ message: 'User registered successfully:', responseInsert });
+        .json({ message: 'User registered successfully:', insertResponse });
     } else {
-      res.status(405).json({
+      res.status(400).json({
         message:
           'User with such data is already registered, please change the email',
       });
@@ -34,16 +35,29 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = await User.findOne({ email });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+    const emailResponse = await userDB.find({
+      selector: { email: email },
+      fields: ['_id', 'email', 'password'], // Получаем только нужные поля
+    });
+    //проверяем по email имеется newUser в userDB
+    if (emailResponse.docs.length === 0) {
+      res.status(404).json({
+        message: 'User not found',
+      });
     }
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-    res.json({ token });
+    const user = emailResponse.docs[0];
+    // Сравнение паролей
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      res.status(400).json({
+        message: 'Invalid password',
+      });
+    }
+    //фомирование токина после всех проверок
+    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
+      expiresIn: '1h',
+    });
+    res.status(200).json(token);
   } catch (error) {
     res.status(500).json({ error: 'Login failed' });
   }
@@ -51,11 +65,14 @@ exports.loginUser = async (req, res) => {
 
 // Получение пользователя по ID
 exports.getUserById = async (req, res) => {
-  const userId = req.params.id;
+  const userId = req.userId;
   try {
-    const user = await User.findById(userId);
+    const user = await userDB.find({
+      selector: { _id: userId },
+      fields: ['_id', 'fullName', 'dateOfBirth', 'email', 'role', 'password'],
+    });
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
+    res.status(200).json(user);
   } catch (error) {
     res.status(500).json({ error: 'Error fetching user' });
   }
