@@ -16,14 +16,4 @@ const createDb = async (dbName) => {
 createDb(DB_NAME); //инициализация базы данных "users"
 const userDB = couch.db.use(DB_NAME); // запуск базы данных "users"
 
-// функция перечисляет все документы в базе данных "users"
-const connectDB = async (userDB) => {
-  try {
-    const docList = await userDB.list();
-    console.log('Databases:', docList);
-  } catch (err) {
-    console.error('Error connecting to CouchDB:', err);
-  }
-};
-
-module.exports = { connectDB, userDB };
+module.exports = userDB;

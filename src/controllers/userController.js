@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
-const { userDB } = require('../config/db');
+const userDB = require('../couchDB/db');
 const { JWT_SECRET } = require('../../config');
 
 // Регистрация пользователя
@@ -37,7 +37,7 @@ exports.loginUser = async (req, res) => {
   try {
     const emailResponse = await userDB.find({
       selector: { email: email },
-      fields: ['_id', 'email', 'password'], // Получаем только нужные поля
+      fields: ['_id', 'email', 'password', 'role'], // Получаем только нужные поля
     });
     //проверяем по email имеется newUser в userDB
     if (emailResponse.docs.length === 0) {
@@ -54,25 +54,29 @@ exports.loginUser = async (req, res) => {
       });
     }
     //фомирование токина после всех проверок
-    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
-      expiresIn: '1h',
-    });
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      JWT_SECRET,
+      {
+        expiresIn: '1h',
+      }
+    );
     res.status(200).json(token);
   } catch (error) {
     res.status(500).json({ error: 'Login failed' });
   }
 };
 
-// Получение пользователя по ID
+// Получение пользователя по ID (user, admin)
 exports.getUserById = async (req, res) => {
   const userId = req.userId;
   try {
     const user = await userDB.find({
       selector: { _id: userId },
-      fields: ['_id', 'fullName', 'dateOfBirth', 'email', 'role', 'password'],
+      fields: ['_id', 'fullName', 'dateOfBirth', 'email', 'role'],
     });
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.status(200).json(user);
+    res.status(200).json(user.docs);
   } catch (error) {
     res.status(500).json({ error: 'Error fetching user' });
   }
@@ -81,8 +85,10 @@ exports.getUserById = async (req, res) => {
 // Получение списка пользователей (только для админа)
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find();
-    res.json(users);
+    const docList = await userDB.list();
+    docList
+      ? res.status(200).json(docList)
+      : res.status(404).json({ message: 'Users not found' });
   } catch (error) {
     res.status(500).json({ error: 'Error fetching users' });
   }

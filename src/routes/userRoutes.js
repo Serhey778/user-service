@@ -2,20 +2,26 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
+const authMiddlewareAdmin = require('../middleware/authMiddlewareAdmin');
 
-// Регистрация
+// Регистрация (user, admin)
 router.post('/register', userController.registerUser);
 
-// Авторизация
+// Авторизация (user, admin)
 router.post('/login', userController.loginUser);
 
-// Получение пользователя по ID
+// Получение пользователя по ID (user, admin)
 router.get('/:id', authMiddleware, userController.getUserById);
 
-// Получение списка пользователей (только для админа)
-router.get('/', authMiddleware, userController.getAllUsers);
+// Получение списка пользователей (admin)
+router.get(
+  '/',
+  authMiddleware,
+  authMiddlewareAdmin,
+  userController.getAllUsers
+);
 
-// Блокировка пользователя
+// Блокировка пользователя (user, admin)
 router.patch('/:id/block', authMiddleware, userController.blockUser);
 
 module.exports = router;
