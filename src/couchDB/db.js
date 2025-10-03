@@ -2,7 +2,6 @@ const nano = require('nano');
 const { COUCHDB_CONFIG, DB_NAME } = require('../../config');
 const couch = nano(`${COUCHDB_CONFIG}`);
 
-// Создание базы данных c именем dbName, если она не существует
 const createDb = async (dbName) => {
   try {
     await couch.db.destroy(dbName);

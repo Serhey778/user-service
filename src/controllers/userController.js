@@ -8,8 +8,7 @@ const { JWT_SECRET } = require('../../config');
 exports.registerUser = async (req, res) => {
   try {
     const newUser = new User(req.body);
-    await newUser.hashPassword(); // функция хэширует пароль
-    //проверка пользователя на существование в базе userDB по email
+    await newUser.hashPassword();
     const emailByResponse = await userDB.find({
       selector: { email: newUser.email },
       fields: ['email'],
@@ -36,23 +35,20 @@ exports.loginUser = async (req, res) => {
   try {
     const emailResponse = await userDB.find({
       selector: { email: email },
-      fields: ['_id', 'email', 'password', 'role'], // Получаем только нужные поля
+      fields: ['_id', 'email', 'password', 'role'],
     });
-    //проверяем по email имеется newUser в userDB
     if (emailResponse.docs.length === 0) {
       res.status(404).json({
         message: 'User not found',
       });
     }
     const user = emailResponse.docs[0];
-    // Сравнение паролей
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       res.status(400).json({
         message: 'Invalid password',
       });
     }
-    //фомирование токина после всех проверок
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       JWT_SECRET,
