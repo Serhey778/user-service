@@ -11,6 +11,7 @@
     "node.js",
     "express",
     "couchdb",
+    "nano",
     "user-service"
   ],
   "author": "muha_778sergey@mail.ru",

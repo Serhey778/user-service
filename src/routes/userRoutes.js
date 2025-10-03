@@ -22,6 +22,6 @@ router.get(
 );
 
 // Блокировка пользователя (user, admin)
-router.patch('/:id/block', authMiddleware, userController.blockUser);
+router.put('/:id/block', authMiddleware, userController.blockUser);
 
 module.exports = router;

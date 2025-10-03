@@ -9,12 +9,11 @@ exports.registerUser = async (req, res) => {
   try {
     const newUser = new User(req.body);
     await newUser.hashPassword(); // функция хэширует пароль
-
+    //проверка пользователя на существование в базе userDB по email
     const emailByResponse = await userDB.find({
       selector: { email: newUser.email },
-      fields: ['email'], // указываем поле, которые хотим получить
+      fields: ['email'],
     });
-    //проверяем по email имеется newUser в userDB
     if (emailByResponse.docs.length === 0) {
       const insertResponse = await userDB.insert(newUser);
       res
@@ -73,7 +72,15 @@ exports.getUserById = async (req, res) => {
   try {
     const user = await userDB.find({
       selector: { _id: userId },
-      fields: ['_id', 'fullName', 'dateOfBirth', 'email', 'role'],
+      fields: [
+        '_id',
+        'fullName',
+        'dateOfBirth',
+        'email',
+        'role',
+        'status',
+        'password',
+      ],
     });
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.status(200).json(user.docs);
@@ -94,15 +101,19 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// Блокировка пользователя
+// Блокировка пользователя (user, admin)
 exports.blockUser = async (req, res) => {
-  const userId = req.params.id;
   try {
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    user.isActive = false;
-    await user.save();
-    res.json({ message: 'User blocked successfully' });
+    const userId = req.userId;
+    const user = await userDB.get(`${userId}`);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    user.status = false;
+    const insertResponse = await userDB.insert(user);
+    res
+      .status(204)
+      .json({ message: 'User blocked successfully', insertResponse });
   } catch (error) {
     res.status(500).json({ error: 'Error blocking user' });
   }
