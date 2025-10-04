@@ -4,7 +4,7 @@ const userController = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
 const authMiddlewareAdmin = require('../middleware/authMiddlewareAdmin');
 
-// Регистрация (user, admin)
+// Регистрация (user и admin )
 router.post('/register', userController.registerUser);
 
 // Авторизация (user, admin)

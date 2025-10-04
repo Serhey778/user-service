@@ -1,4 +1,6 @@
-const COUCHDB_CONFIG = 'http://admin:Muha_778sergey@127.0.0.1:5984';
+const ADMIN_LOGIN = 'admin';
+const ADMIN_PASSWORD = 'Muha_778sergey';
+const COUCHDB_CONFIG = `http://${ADMIN_LOGIN}:${ADMIN_PASSWORD}@127.0.0.1:5984`;
 const PORT = 5000;
 const DB_NAME = 'users';
 const JWT_SECRET =

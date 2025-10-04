@@ -2,12 +2,12 @@ const bcrypt = require('bcryptjs');
 
 class User {
   constructor(data) {
-    this.fullName = data.fullName;
-    this.dateOfBirth = data.dateOfBirth;
+    this.fullName = data.fullName || 'fullName';
+    this.dateOfBirth = data.dateOfBirth || 'dateOfBirth';
     this.email = data.email;
     this.password = data.password;
+    this.isActive = data.status || true;
     this.role = data.role || 'user';
-    this.status = data.status || true;
   }
   // функция хэширует пароль
   async hashPassword() {

@@ -6,62 +6,75 @@ const { JWT_SECRET } = require('../../config');
 
 // Регистрация пользователя
 exports.registerUser = async (req, res) => {
-  try {
-    const newUser = new User(req.body);
-    await newUser.hashPassword();
-    const emailByResponse = await userDB.find({
-      selector: { email: newUser.email },
-      fields: ['email'],
+  if (!req.body.email || !req.body.password || req.body === undefined) {
+    res.status(400).json({
+      message: 'email and password properties must be!',
     });
-    if (emailByResponse.docs.length === 0) {
-      const insertResponse = await userDB.insert(newUser);
-      res
-        .status(201)
-        .json({ message: 'User registered successfully:', insertResponse });
-    } else {
-      res.status(400).json({
-        message:
-          'User with such data is already registered, please change the email',
+  } else {
+    try {
+      const newUser = new User(req.body);
+      await newUser.hashPassword();
+      const emailByResponse = await userDB.find({
+        selector: { email: newUser.email },
+        fields: ['email'],
       });
+      if (emailByResponse.docs.length === 0) {
+        const insertResponse = await userDB.insert(newUser);
+        res
+          .status(201)
+          .json({ message: 'User registered successfully:', insertResponse });
+      } else {
+        res.status(400).json({
+          message:
+            'User with such data is already registered, please change the email',
+        });
+      }
+    } catch (err) {
+      res.status(500).json({ error: 'Registration failed:', err });
     }
-  } catch (err) {
-    res.status(500).json({ error: 'Registration failed:', err });
   }
 };
 
 // Авторизация пользователя
 exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
-  try {
-    const emailResponse = await userDB.find({
-      selector: { email: email },
-      fields: ['_id', 'email', 'password', 'role'],
+  if (!email || !password || req.body === undefined) {
+    res.status(400).json({
+      message: 'email and password properties must be!',
     });
-    if (emailResponse.docs.length === 0) {
-      res.status(404).json({
-        message: 'User not found',
+  } else {
+    try {
+      const emailResponse = await userDB.find({
+        selector: { email: email },
+        fields: ['_id', 'email', 'password', 'role'],
       });
-    }
-    const user = emailResponse.docs[0];
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      res.status(400).json({
-        message: 'Invalid password',
-      });
-    }
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      JWT_SECRET,
-      {
-        expiresIn: '1h',
+      if (emailResponse.docs.length === 0) {
+        res.status(404).json({
+          message: 'User not found',
+        });
+      } else {
+        const user = emailResponse.docs[0];
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+          res.status(400).json({
+            message: 'Invalid password',
+          });
+        } else {
+          const token = jwt.sign(
+            { id: user._id, email: user.email, role: user.role },
+            JWT_SECRET,
+            {
+              expiresIn: '1h',
+            }
+          );
+          res.status(200).json(token);
+        }
       }
-    );
-    res.status(200).json(token);
-  } catch (error) {
-    res.status(500).json({ error: 'Login failed' });
+    } catch (error) {
+      res.status(500).json({ error: 'Login failed' });
+    }
   }
 };
-
 // Получение пользователя по ID (user, admin)
 exports.getUserById = async (req, res) => {
   const userId = req.userId;
@@ -74,7 +87,7 @@ exports.getUserById = async (req, res) => {
         'dateOfBirth',
         'email',
         'role',
-        'status',
+        'isActive',
         'password',
       ],
     });
@@ -105,7 +118,7 @@ exports.blockUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    user.status = false;
+    user.isActive = false;
     const insertResponse = await userDB.insert(user);
     res
       .status(204)
